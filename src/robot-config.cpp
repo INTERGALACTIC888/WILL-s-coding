@@ -1,4 +1,8 @@
 #include "robot-config.h"
+#include "lemlib/chassis/trackingWheel.hpp"
+
+//Controller
+pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
 // -------------------- Motors --------------------
 pros::MotorGroup leftDrive({-20, 1, -2}, pros::MotorGearset::green); // TODO: update ports
@@ -12,34 +16,32 @@ constexpr double TRACK_WIDTH_IN = 12.625; // measure center-to-center of left & 
 constexpr int DRIVE_RPM = 200; // green cartridge decared above
 
 lemlib::Drivetrain drivetrain(
-&leftDrive, &rightDrive,
-TRACK_WIDTH_IN,
-lemlib::Omniwheel::NEW_4, // 4" omni preset; if 3.25", use NEW_325
-DRIVE_RPM,
-0.5 // drift (tune later)
+    &leftDrive, 
+    &rightDrive,
+    TRACK_WIDTH_IN,
+    lemlib::Omniwheel::NEW_325, // 4" omni preset; if 3.25", use NEW_325
+    DRIVE_RPM,
+    0.5 // drift (tune later)
 );
 
 // IMU-only odometry to start (you can add tracking wheels later)
 // If you do not have tracking wheels, use the IMU-only constructor:
 lemlib::OdomSensors odom(
-	static_cast<lemlib::TrackingWheel*>(nullptr), // left tracking wheel not used
-	static_cast<lemlib::TrackingWheel*>(nullptr), // right tracking wheel not used
-	static_cast<lemlib::TrackingWheel*>(nullptr), // middle tracking wheel not used
-	&imu     // IMU-only odometry
+    nullptr, nullptr, nullptr, nullptr &imu
 );
 
 // PID placeholders (safe starters; we’ll tune on the real bot)
 // Example: lemlib::ControllerSettings(kP, kI, kD, windupRange, smallErrorRange, smallErrorTimeout, largeErrorRange, largeErrorTimeout, slew)
-lemlib::ControllerSettings lateral(12, 0, 30, 3, 1, 0, 3, 1, 0);
+lemlib::ControllerSettings linear(12, 0, 30, 3, 1, 0, 3, 1, 0);
 lemlib::ControllerSettings angular(3, 0, 35, 3, 1, 0, 3, 1, 0);
 
 // Driver input curves (gentle expo, adjust to taste)
-lemlib::ExpoDriveCurve throttleCurve(3, 10, 1.0);
-lemlib::ExpoDriveCurve steerCurve(3, 10, 1.0);
+lemlib::ExpoDriveCurve throttleCurve(3, 10, 1.0, true);
+lemlib::ExpoDriveCurve steerCurve(3, 10, 1.0, true);
 
 // THE one-and-only chassis
 lemlib::Chassis chassis(
-drivetrain, lateral, angular, odom,
+drivetrain, linear, angular, odom,
 &throttleCurve, &steerCurve
 );
 
@@ -47,3 +49,4 @@ drivetrain, lateral, angular, odom,
 void configureSensors() {
 imu.reset();
 while (imu.is_calibrating()) pros::delay(20);
+}
