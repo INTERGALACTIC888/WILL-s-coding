@@ -7,22 +7,7 @@
  * "I was pressed!" and nothing.
  */
 #include "robot-config.cpp"
-//Motor group defenitions (real ports)
 
-// pros::MotorGroup left_drivetrain({-20, 1, -2},pros::MotorGearset::green);    // Left side motors
-// pros::MotorGroup right_drivetrain({8, -17, 16},pros::MotorGearset::green);  // right side motors
-// lemlib::Drivetrain drivetrain(&left_drivetrain, &right_drivetrain, 12.625, lemlib::Omniwheel::NEW_4, 300, 0.5);
-// pros::Imu imu(11);
-// pros::Rotation left_drivetrain_rotation(6);
-// lemlib::TrackingWheel left_tracking_wheel(&left_drivetrain_rotation, lemlib::Omniwheel::NEW_4, -6.4);
-// lemlib::OdomSensors Odom (&left_tracking_wheel, nullptr, nullptr, nullptr, &imu);
-// lemlib::ControllerSettings lateral_controller(10, 0, 5, 3, 1, 100, 3, 500, 20);
-// lemlib::ControllerSettings angular_controller(2, 0.3, 25, 3, 1, 140, 3, 500, 0);
-// lemlib::Chassis chassis(drivetrain, lateral_controller, angular_controller, Odom);
-// pros::Controller controller(pros::E_CONTROLLER_MASTER);
-// // pros::Controller controller2(pros::E_CONTROLLER_PARTNER);
-// pros::Motor intake2(14);
-// pros::adi::DigitalOut clamp('A');
 
 
 void on_center_button() {
@@ -45,7 +30,30 @@ void initialize() {
 void disabled() {}
 
 void competition_initialize() {}
+bool isBallInIntake(){
+	//e.g. optical sensor detects ball
+	return optical1.get_proximity() > 100;
+}
+void intakeBall() {
+    chassis.setPose(0, 0, 0);
+    lemlib::Pose intakeBallTarget(0, 24);
 
+    // spin intake
+    intakeBall();
+    // move towards ball
+    chassis.moveToPoint(intakeBallTarget.x, intakeBallTarget.y, 1500, {.minSpeed=48});
+
+    // Wait until a ball has been intaked.
+    // Or until the motion has stopped after which, the state of
+    // the intake is very unlikely to change and we'd be wasting time
+    while (chassis.isInMotion() && !isBallInIntake()) {
+        pros::delay(10); // don't consume all the cpu's resources
+    }
+
+    // Cancel and move on to the next motion since the purpose of the first is complete.
+    // If the motion had exited before a ball was detected, then this will do nothing.
+    chassis.cancelMotion();
+}
 void autonomous(){
 	pros::Motor front_left_motor = pros::Motor(20);
 	pros::Motor middle_left_motor = pros::Motor(1);
@@ -53,4 +61,25 @@ void autonomous(){
 	pros::Motor front_right_motor = pros::Motor(8);
 	pros::Motor middle_right_motor = pros::Motor(17);
 	pros::Motor back_right_motor = pros::Motor(16);
+
+	// set chassis pose
+    chassis.setPose(0, 0, 0);
+    // lookahead distance: 15 inches
+    // timeout: 2000 ms
+    chassis.follow(example_txt, 15, 2000);
+    // follow the next path, but with the robot going backwards
+    chassis.follow(example2_txt, 15, 2000, false);
+	chassis.moveToPoint(10, 10, 4000); 
+	// move the chassis to (10, 10)
+    // with a timeout of 4000 ms
+
+	chassis.moveToPose(10, 10, 90, 4000); 
+	// move the chassis to (10, 10, 90)
+    // with a timeout of 4000 ms
+	
 	}
+	// path file name is "example.txt".
+	// "." is replaced with "_" to overcome c++ limitations
+	ASSET(example_txt);
+	ASSET(example2_txt)
+

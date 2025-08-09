@@ -1,195 +1,49 @@
-#include "lemlib/api.hpp"
-#include "pros/adi.hpp"
-#include "pros/imu.hpp"
-#include "pros/misc.h"
-#include "pros/misc.hpp"
-#include "pros/motors.hpp"
-#include "pros/rtos.hpp"
-#include "main.h"
+#include "robot-config.h"
 
-//Declare motor groups (extern means they're defined elsewhere)
-extern pros::MotorGroup left_drivetrain;
-extern pros::MotorGroup right_drivetrain;
+// -------------------- Motors --------------------
+pros::MotorGroup leftDrive({-20, 1, -2}, pros::MotorGearset::green); // TODO: update ports
+pros::MotorGroup rightDrive({8, -17, 16}, pros::MotorGearset::green); // TODO: update ports
 
-//Declare the drivetrain object
-extern lemlib::Drivetrain drivetrain;
-//Use Ctrl click on name for function info
-//controller
-pros::Controller controller(pros::E_CONTROLLER_MASTER);
-pros::Motor LeftF(3,pros::v5::MotorGears::blue);
-pros::Motor LeftM(4,pros::v5::MotorGears::blue);
-pros::Motor LeftB(5,pros::v5::MotorGears::blue);
+// -------------------- Sensors --------------------
+pros::Imu imu(11); // TODO: update to your real port
 
-pros::MotorGroup leftMotors({-20,18,-19}, pros::MotorGearset::blue);
-pros::MotorGroup rightMotors({10,-8,9}, pros::MotorGearset::blue);
+// -------------------- LemLib core --------------------
+constexpr double TRACK_WIDTH_IN = 12.625; // measure center-to-center of left & right wheels
+constexpr int DRIVE_RPM = 200; // green cartridge decared above
 
-//5.5w
-pros::Motor Inake1(8,pros::v5::MotorGears::green);
-//imu
-pros::IMU imu(5);
-
-//cylinder
-pros::adi::DigitalOut cylinder('A');
-
-//Drivetrain
-lemlib::Drivetrain drivetrain (
-    &left_drivetrain, //Left motor group
-    &right_drivetrain, //Right motor group
-    10, //10 inch track width
-    lemlib::Omniwheel::NEW_325, //Using new 3.25" omnis
-    360, //Drivetrain rpm is 360
-    2 //Horizontal drift is 2 (for now)
-);
-
-//Encoder
-pros::adi::Encoder adi_encoder('A', 'B');
-
-//Rotation sensor
-pros::Rotation rotation_sensor(1);
-
-//Testing if the IMU's are in the correct position
-    //Replace 'A', 'B', with the ports the sensor is connected to
-    pros::adi::Encoder vertical_encoder('A', 'B');
-    //Replace 1 with the port the rotation sensor is connected to
-    pros::Rotation horizontal_sensor(1);
-
-    //This runs at the start of the program
-    void initialize() {
-        pros::lcd::initialize(); //Initialize brain screen
-        while (true) { //Infinite loop
-            //Print measurements from the adi encoder
-            pros::lcd::print(0, "ADI Encoder: %i", adi_encoder.get_value());
-            //Print measurements from the rotation sensor
-            pros::lcd::print(1, "Rotation Sensor: %i", rotation_sensor.get_position());
-            pros::delay(10); //Delay to save resources. DO NOT REMOVE
-        }
-    }
-
-//Updating the variables
-    //Reversed ADI Encoder
-    pros::adi::Encoder adi_encoder('A', 'B', true);
-    //Reversed rotation sensor
-    pros::Rotation rotation_sensor(-1);
-
-    //Initialise tracking wheels
-    //Horizontal tracking wheel encoder
-    pros::Rotation horizontal_encoder(20);
-    //Vertical tracking wheel encoder
-    pros::adi::Encoder vertical_encoder('C', 'D', true);
-    //Horizontal tracking wheel
-    lemlib::TrackingWheel horizontal_tracking_wheel(&horizontal_encoder, lemlib::Omniwheel::NEW_275, -5.75);
-    //Vertical tracking wheel
-    lemlib::TrackingWheel vertical_tracking_wheel(&vertical_encoder, lemlib::Omniwheel::NEW_275, -2.5);
-
-//PID
-    //Lateral PID controller
-    lemlib::ControllerSettings lateral_controller(
-    10, //Proportional gain (kP)
-    0, //Integral gain (kI)
-    3, //Derivative gain (kD)
-    3, //Anti windup
-    1, //Small error range, in inches
-    100, //Small error range timeout, in milliseconds
-    3, //Large error range, in inches
-    500, //Large error range timeout, in milliseconds
-    20 //Maximum acceleration (slew)
-);
-
-//Angular PID controller
-lemlib::ControllerSettings angular_controller(
-    2, //Proportional gain (kP)
-    0, //Integral gain (kI)
-    10, //Derivative gain (kD)
-    3, //Anti windup
-    1, //Small error range, in degrees
-    100, //Small error range timeout, in milliseconds
-    3, //Large error range, in degrees
-    500, //Large error range timeout, in milliseconds
-    0 //Maximum acceleration (slew)
-);
-
-//Final config
-//Left motor group
-pros::MotorGroup left_motor_group({-1, 2, -3}, pros::MotorGears::blue);
-//Right motor group
-pros::MotorGroup right_motor_group({4, -5, 6}, pros::MotorGears::green);
-
-//Drivetrain settings
 lemlib::Drivetrain drivetrain(
-    &left_motor_group, //Left motor group
-    &right_motor_group, //Right motor group
-    10, //10 inch track width
-    lemlib::Omniwheel::NEW_4, //Using new 4" omnis
-    360, //Drivetrain rpm is 360
-    2 //Horizontal drift is 2 (for now)
+&leftDrive, &rightDrive,
+TRACK_WIDTH_IN,
+lemlib::Omniwheel::NEW_4, // 4" omni preset; if 3.25", use NEW_325
+DRIVE_RPM,
+0.5 // drift (tune later)
 );
 
-//Imu
-pros::Imu imu(10);
-//Horizontal tracking wheel encoder
-pros::Rotation horizontal_encoder(20);
-//Vertical tracking wheel encoder
-pros::adi::Encoder vertical_encoder('C', 'D', true);
-//Horizontal tracking wheel
-lemlib::TrackingWheel horizontal_tracking_wheel(&horizontal_encoder, lemlib::Omniwheel::NEW_275, -5.75);
-//Vertical tracking wheel
-lemlib::TrackingWheel vertical_tracking_wheel(&vertical_encoder, lemlib::Omniwheel::NEW_275, -2.5);
-
-//Odometry settings
-lemlib::OdomSensors sensors(
-    &vertical_tracking_wheel, //Vertical tracking wheel 1, set to null
-    nullptr, //Vertical tracking wheel 2, set to nullptr as we are using IMEs
-    &horizontal_tracking_wheel, //Horizontal tracking wheel 1
-    nullptr, //Horizontal tracking wheel 2, set to nullptr as we don't have a second one
-    &imu //Inertial sensor
+// IMU-only odometry to start (you can add tracking wheels later)
+// If you do not have tracking wheels, use the IMU-only constructor:
+lemlib::OdomSensors odom(
+	static_cast<lemlib::TrackingWheel*>(nullptr), // left tracking wheel not used
+	static_cast<lemlib::TrackingWheel*>(nullptr), // right tracking wheel not used
+	static_cast<lemlib::TrackingWheel*>(nullptr), // middle tracking wheel not used
+	&imu     // IMU-only odometry
 );
 
-//Lateral PID controller
-lemlib::ControllerSettings lateral_controller(
-    10, //Proportional gain (kP)
-    0, //Integral gain (kI)
-    3, //Derivative gain (kD)
-    3, //Anti windup
-    1, //Small error range, in inches
-    100, //Small error range timeout, in milliseconds
-    3, //Large error range, in inches
-    500, //Large error range timeout, in milliseconds
-    20 //Maximum acceleration (slew)
+// PID placeholders (safe starters; we’ll tune on the real bot)
+// Example: lemlib::ControllerSettings(kP, kI, kD, windupRange, smallErrorRange, smallErrorTimeout, largeErrorRange, largeErrorTimeout, slew)
+lemlib::ControllerSettings lateral(12, 0, 30, 3, 1, 0, 3, 1, 0);
+lemlib::ControllerSettings angular(3, 0, 35, 3, 1, 0, 3, 1, 0);
+
+// Driver input curves (gentle expo, adjust to taste)
+lemlib::ExpoDriveCurve throttleCurve(3, 10, 1.0);
+lemlib::ExpoDriveCurve steerCurve(3, 10, 1.0);
+
+// THE one-and-only chassis
+lemlib::Chassis chassis(
+drivetrain, lateral, angular, odom,
+&throttleCurve, &steerCurve
 );
 
-//Angular PID controller
-lemlib::ControllerSettings angular_controller(
-    2, //Proportional gain (kP)
-    0, //Integral gain (kI)
-    10, //Derivative gain (kD)
-    3, //Anti windup
-    1, //Small error range, in degrees
-    100, //Small error range timeout, in milliseconds
-    3, //Large error range, in degrees
-    500, //Large error range timeout, in milliseconds
-    0 //Maximum acceleration (slew)
-);
-
-// create the chassis
-lemlib::Chassis chassis(drivetrain, // drivetrain settings
-                        lateral_controller, // lateral PID settings
-                        angular_controller, // angular PID settings
-                        sensors // odometry sensors
-);
-
-// initialize function. Runs on program startup
-void initialize() {
-    pros::lcd::initialize(); // initialize brain screen
-    chassis.calibrate(); // calibrate sensors
-    // print position to brain screen
-    pros::Task screen_task([&]() {
-        while (true) {
-            // print robot location to the brain screen
-            pros::lcd::print(0, "X: %f", chassis.getPose().x); // x
-            pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
-            pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); // heading
-            // delay to save resources
-            pros::delay(20);
-        }
-    });
-}
+// Optional: one place to configure sensors at boot
+void configureSensors() {
+imu.reset();
+while (imu.is_calibrating()) pros::delay(20);
