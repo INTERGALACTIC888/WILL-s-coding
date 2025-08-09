@@ -1,52 +1,78 @@
 #include "robot-config.h"
-#include "lemlib/chassis/trackingWheel.hpp"
+#include "lemlib/chassis/trackingWheel.hpp" // wheel size constants
 
-//Controller
+// -------- Controller --------
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
-// -------------------- Motors --------------------
-pros::MotorGroup leftDrive({-20, 1, -2}, pros::MotorGearset::green); // TODO: update ports
-pros::MotorGroup rightDrive({8, -17, 16}, pros::MotorGearset::green); // TODO: update ports
+// -------- Motors (TODO: update to your real ports; negative = reversed) --------
+pros::MotorGroup leftDrive({-20, 1, -2}, pros::MotorGearset::green);
+pros::MotorGroup rightDrive({8, -17, 16}, pros::MotorGearset::green);
 
-// -------------------- Sensors --------------------
-pros::Imu imu(11); // TODO: update to your real port
+// Optional (used by intakeBall() helper in main.cpp)
+pros::Motor intakeF(3);
+pros::Motor intakeM(4);
+pros::Motor intakeB(5);
 
-// -------------------- LemLib core --------------------
-constexpr double TRACK_WIDTH_IN = 12.625; // measure center-to-center of left & right wheels
-constexpr int DRIVE_RPM = 200; // green cartridge decared above
+// -------- Sensors --------
+pros::Imu imu(11); // TODO: change to your real IMU port
+pros::Optical optical1(9); // TODO: change to your real optical port
+
+// -------- LemLib core --------
+constexpr double TRACK_WIDTH_IN = 12.625; // measure center-to-center
+constexpr auto WHEEL_PRESET = lemlib::Omniwheel::NEW_325; // use NEW_4 if 4" wheels
+constexpr int DRIVE_RPM = 200; // green cartridge
+constexpr float H_DRIFT = 2.0f; // tune later
 
 lemlib::Drivetrain drivetrain(
-    &leftDrive, 
-    &rightDrive,
-    TRACK_WIDTH_IN,
-    lemlib::Omniwheel::NEW_325, // 4" omni preset; if 3.25", use NEW_325
-    DRIVE_RPM,
-    0.5 // drift (tune later)
+&leftDrive,
+&rightDrive,
+TRACK_WIDTH_IN,
+WHEEL_PRESET,
+DRIVE_RPM,
+H_DRIFT
 );
 
-// IMU-only odometry to start (you can add tracking wheels later)
-// If you do not have tracking wheels, use the IMU-only constructor:
+// Your LemLib needs 4 tracking-wheel pointers + IMU.
+// IMU-only odometry for now: pass four nullptrs + &imu.
 lemlib::OdomSensors odom(
-    nullptr, nullptr, nullptr, nullptr &imu
+nullptr, nullptr, // vertical1, vertical2
+nullptr, nullptr, // horizontal1, horizontal2
+&imu
 );
 
-// PID placeholders (safe starters; we’ll tune on the real bot)
-// Example: lemlib::ControllerSettings(kP, kI, kD, windupRange, smallErrorRange, smallErrorTimeout, largeErrorRange, largeErrorTimeout, slew)
-lemlib::ControllerSettings linear(12, 0, 30, 3, 1, 0, 3, 1, 0);
-lemlib::ControllerSettings angular(3, 0, 35, 3, 1, 0, 3, 1, 0);
+// PID starting points (safe defaults—tune on the bot)
+lemlib::ControllerSettings linear(
+12, 0, 30, // kP, kI, kD
+3, // windupRange
+1, 0, // smallError, smallErrorTimeout
+3, 1, // largeError, largeErrorTimeout
+0 // slew
+);
+lemlib::ControllerSettings angular(
+3, 0, 35,
+3,
+1, 0,
+3, 1,
+0
+);
 
-// Driver input curves (gentle expo, adjust to taste)
-lemlib::ExpoDriveCurve throttleCurve(3, 10, 1.0, true);
-lemlib::ExpoDriveCurve steerCurve(3, 10, 1.0, true);
+// Driver curves
+lemlib::ExpoDriveCurve throttleCurve(3, 10, 1.0);
+lemlib::ExpoDriveCurve steerCurve(3, 10, 1.0);
 
-// THE one-and-only chassis
+// Single global chassis instance
 lemlib::Chassis chassis(
-drivetrain, linear, angular, odom,
-&throttleCurve, &steerCurve
+drivetrain,
+linear,
+angular,
+odom,
+&throttleCurve,
+&steerCurve
 );
 
-// Optional: one place to configure sensors at boot
+// -------- Boot helper --------
 void configureSensors() {
 imu.reset();
 while (imu.is_calibrating()) pros::delay(20);
+optical1.set_led_pwm(100); // helpful for color/proximity reliability
 }

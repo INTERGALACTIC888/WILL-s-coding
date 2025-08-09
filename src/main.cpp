@@ -1,85 +1,75 @@
 #include "main.h"
-#include "lemlib/api.hpp" // IWYU pragma: keep
-/**
- * A callback function for LLEMU's center button.
- *
- * When this callback is fired, it will toggle line 2 of the LCD text between
- * "I was pressed!" and nothing.
- */
-#include "robot-config.cpp"
+#include "robot-config.h"
+#include "lemlib/api.hpp"
+#include "lemlib/asset.hpp" // only needed if you use ASSET() paths
 
+// Optional: embed static/example.txt as an asset (you have this file)
+ASSET(example_txt); // comment out if you don't want to use path following yet
 
-
+// LCD button demo from PROS template
 void on_center_button() {
-	static bool pressed = false;
-	pressed = !pressed;
-	if (pressed) {
-		pros::lcd::set_text(2, "I was pressed!");
-	} else {
-		pros::lcd::clear_line(2);
-	}
+static bool pressed = false;
+pressed = !pressed;
+pros::lcd::set_text(2, pressed ? "I was pressed!" : "");
 }
 
 void initialize() {
-	pros::lcd::initialize();
-	pros::lcd::set_text(1, "Hello PROS User!");
+pros::lcd::initialize();
+pros::lcd::set_text(1, "Hello PROS User!");
+pros::lcd::register_btn1_cb(on_center_button);
 
-	pros::lcd::register_btn1_cb(on_center_button);
+configureSensors();
+chassis.setPose(0, 0, 0);
+
+// Show pose on LCD
+pros::Task screenTask([] {
+while (true) {
+auto p = chassis.getPose();
+pros::lcd::print(0, "X: %.2f", p.x);
+pros::lcd::print(1, "Y: %.2f", p.y);
+pros::lcd::print(2, "Th: %.2f", p.theta);
+pros::delay(50);
+}
+});
 }
 
 void disabled() {}
-
 void competition_initialize() {}
-bool isBallInIntake(){
-	//e.g. optical sensor detects ball
-	return optical1.get_proximity() > 100;
+
+// Tiny helper the way you intended (fixed; no recursion)
+static inline bool isBallInIntake() {
+return optical1.get_proximity() > 100; // tune threshold on the bot
+}
+static inline void setIntake(int v) {
+intakeF.move(v); intakeM.move(v); intakeB.move(v);
 }
 void intakeBall() {
-    chassis.setPose(0, 0, 0);
-    lemlib::Pose intakeBallTarget(0, 24);
-
-    // spin intake
-    intakeBall();
-    // move towards ball
-    chassis.moveToPoint(intakeBallTarget.x, intakeBallTarget.y, 1500, {.minSpeed=48});
-
-    // Wait until a ball has been intaked.
-    // Or until the motion has stopped after which, the state of
-    // the intake is very unlikely to change and we'd be wasting time
-    while (chassis.isInMotion() && !isBallInIntake()) {
-        pros::delay(10); // don't consume all the cpu's resources
-    }
-
-    // Cancel and move on to the next motion since the purpose of the first is complete.
-    // If the motion had exited before a ball was detected, then this will do nothing.
-    chassis.cancelMotion();
+// spin intake, drive to a ball 24" ahead, stop when detected
+setIntake(127);
+lemlib::Pose target(0, 24);
+chassis.moveToPoint(target.x, target.y, 1500, {.minSpeed=48});
+while (chassis.isInMotion() && !isBallInIntake()) pros::delay(10);
+chassis.cancelMotion(); // in case we detected early
+setIntake(0);
 }
-void autonomous(){
-	pros::Motor front_left_motor = pros::Motor(20);
-	pros::Motor middle_left_motor = pros::Motor(1);
-	pros::Motor back_left_motor = pros::Motor(2);
-	pros::Motor front_right_motor = pros::Motor(8);
-	pros::Motor middle_right_motor = pros::Motor(17);
-	pros::Motor back_right_motor = pros::Motor(16);
 
-	// set chassis pose
-    chassis.setPose(0, 0, 0);
-    // lookahead distance: 15 inches
-    // timeout: 2000 ms
-    chassis.follow(example_txt, 15, 2000);
-    // follow the next path, but with the robot going backwards
-    chassis.follow(example2_txt, 15, 2000, false);
-	chassis.moveToPoint(10, 10, 4000); 
-	// move the chassis to (10, 10)
-    // with a timeout of 4000 ms
+void autonomous() {
+chassis.setPose(0, 0, 0);
 
-	chassis.moveToPose(10, 10, 90, 4000); 
-	// move the chassis to (10, 10, 90)
-    // with a timeout of 4000 ms
-	
-	}
-	// path file name is "example.txt".
-	// "." is replaced with "_" to overcome c++ limitations
-	ASSET(example_txt);
-	ASSET(example2_txt)
+// If you want to follow the embedded path from static/example.txt:
+// lookahead 15", 2s timeout
+chassis.follow(example_txt, 15, 2000);
 
+// Or just do a simple motion:
+// chassis.moveToPoint(10, 10, 4000);
+// chassis.moveToPose(10, 10, 90, 4000);
+}
+
+void opcontrol() {
+while (true) {
+const double fwd = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0;
+const double turn = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0;
+chassis.arcade(fwd, turn);
+pros::delay(10);
+}
+}
