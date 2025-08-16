@@ -2,18 +2,18 @@
 #include "main.h"
 #include "lemlib/api.hpp"
 
-// Controller
+//Controller
 extern pros::Controller controller;
 
-// Drive motors (update ports in .cpp)
+//Drive motors (update ports in .cpp)
 extern pros::MotorGroup leftDrive;
 extern pros::MotorGroup rightDrive;
 
-// Sensors you actually use right now
+//Sensors you actually use right now
 extern pros::Imu imu;
 extern pros::Optical optical1;
 
-// LemLib core
+//LemLib core
 extern lemlib::Drivetrain drivetrain;
 extern lemlib::OdomSensors odom; // IMU-only for now
 extern lemlib::ControllerSettings linear; // forward PID
@@ -22,10 +22,10 @@ extern lemlib::ExpoDriveCurve throttleCurve;
 extern lemlib::ExpoDriveCurve steerCurve;
 extern lemlib::Chassis chassis;
 
-// Boot helper
+//Boot helper
 void configureSensors();
 
-// (Optional now, used below)
+//(Optional now, used below)
 extern pros::Motor intakeF;
 extern pros::Motor intakeM;
 extern pros::Motor intakeB;

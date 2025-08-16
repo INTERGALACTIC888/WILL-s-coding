@@ -1,12 +1,35 @@
 #include "main.h"
 #include "robot-config.h"
 #include "lemlib/api.hpp"
-#include "lemlib/asset.hpp" // only needed if you use ASSET() paths
+#include "lemlib/asset.hpp" //Only needed if you use ASSET() paths
 
-// Optional: embed static/example.txt as an asset (you have this file)
+
+//NOTES
+
+//Measure distance between tracking wheels and tracking centre
+//Tracking centre is the middle of the drivetrain
+//Find the input in robot-config.cpp, search for "lemlib::trackingwheel horizontal" and "lemlib::trackingwheel vertical"
+//For tracking wheel size do not include decimal, e.g. 3.25 in would become 325
+//Units are Inches
+//Name sensors "Horizontal encoder" and "vertical encoder" in robot-config.cpp
+
+//Tuning pid
+    //Search for "lemlib::ControllerSettings latteralController" and "lemlib::ControllerSettings angularController"
+//CHange drive mode by searching in main.cpp "chassis.tank" or "chassis.split arcade"
+//Optional: embed static/example.txt as an asset (you have this file)
+
+//TODO
+    //Install the 2 TrackingWheels
+        //Use smallest size available
+        //Make wheels spriny and pneumatically controlled
+            //Do this by having low pressure air in piston holding wheel
+    //Find the measurements from tracking wheel and tracking centre(middle of drivetrain)
+        //Make sure that the wheels are flat or ground level
+    //Find size of tracking wheels
+
 ASSET(example_txt); // comment out if you don't want to use path following yet
 
-// LCD button demo from PROS template
+//LCD button demo from PROS template
 void on_center_button() {
 static bool pressed = false;
 pressed = !pressed;
@@ -21,7 +44,7 @@ pros::lcd::register_btn1_cb(on_center_button);
 configureSensors();
 chassis.setPose(0, 0, 0);
 
-// Show pose on LCD
+//Show pose on LCD
 pros::Task screenTask([] {
 while (true) {
 auto p = chassis.getPose();
@@ -36,7 +59,7 @@ pros::delay(50);
 void disabled() {}
 void competition_initialize() {}
 
-// Tiny helper the way you intended (fixed; no recursion)
+//Tiny helper the way you intended (fixed; no recursion)
 static inline bool isBallInIntake() {
 return optical1.get_proximity() > 100; // tune threshold on the bot
 }
@@ -44,7 +67,7 @@ static inline void setIntake(int v) {
 intakeF.move(v); intakeM.move(v); intakeB.move(v);
 }
 void intakeBall() {
-// spin intake, drive to a ball 24" ahead, stop when detected
+//Spin intake, drive to a ball 24" ahead, stop when detected
 setIntake(127);
 lemlib::Pose target(0, 24);
 chassis.moveToPoint(target.x, target.y, 1500, {.minSpeed=48});
@@ -56,13 +79,13 @@ setIntake(0);
 void autonomous() {
 chassis.setPose(0, 0, 0);
 
-// If you want to follow the embedded path from static/example.txt:
-// lookahead 15", 2s timeout
+//If you want to follow the embedded path from static/example.txt:
+//Lookahead 15", 2s timeout
 chassis.follow(example_txt, 15, 2000);
 
-// Or just do a simple motion:
-// chassis.moveToPoint(10, 10, 4000);
-// chassis.moveToPose(10, 10, 90, 4000);
+//Or just do a simple motion:
+//Chassis.moveToPoint(10, 10, 4000);
+//Chassis.moveToPose(10, 10, 90, 4000);
 }
 
 void opcontrol() {
