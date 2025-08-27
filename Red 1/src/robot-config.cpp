@@ -1,4 +1,4 @@
-#include "robot-config.h"
+#include "robot-config.hpp"
 #include "lemlib/chassis/trackingWheel.hpp" //Wheel size constants
 
 //Controller
@@ -34,10 +34,16 @@ H_DRIFT
 
 //Your LemLib needs 4 tracking-wheel pointers + IMU.
 //IMU-only odometry for now: pass four nullptrs + &imu.
-lemlib::OdomSensors odom(
-nullptr, nullptr, //Vertical1, Vertical2
-nullptr, nullptr, //Horizontal1, Horizontal2
-&imu
+pros::Rotation horizontalEncoder(20); //change these ports
+pros::Rotation verticalEncoder(-19); // negetive means that the encoder is backwards
+lemlib::TrackingWheel horizontal(&horizontalEncoder, lemlib::Omniwheel::NEW_275, -6.5);
+lemlib::TrackingWheel vertical(&verticalEncoder, lemlib::Omniwheel::NEW_275, -6.5);
+
+lemlib::OdomSensors sensors(&vertical, 
+    nullptr, 
+    &horizontal, 
+    nullptr, 
+    &imu
 );
 
 //PID starting points (safe defaults—tune on the bot)

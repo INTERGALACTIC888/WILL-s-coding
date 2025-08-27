@@ -1,7 +1,13 @@
 #include "main.h"
-#include "robot-config.h"
+#include "robot-config.hpp"
 #include "lemlib/api.hpp"
 #include "lemlib/asset.hpp" //Only needed if you use ASSET() paths
+pros::Motor intake1(1);
+pros::Motor intake2(2);
+pros::Motor intake3(10);
+pros::adi::Pneumatics top('A', false);
+pros::adi::Pneumatics basket('H', false);
+pros::adi::Pneumatics load ('F', false);
 //NOTES
 //Measure distance between tracking wheels and tracking centre
 //Tracking centre is the middle of the drivetrain
@@ -121,38 +127,6 @@ void autonomous() {
     pros::delay(5000);
     lowgoalstop();
 }
-void intake(){
-
-
-}
-void intakestop(){
-
-
-}
-void loading(){
-
-
-}
-void loadingstop(){
-
-
-}
-void lowgoal(){
-
-
-}
-void lowgoalstop(){
-
-
-}
-void highgoal(){
-
-
-}
-void highgoalstop(){
-
-
-}
 void opcontrol() {
     while (true) {
     const double fwd = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0;
@@ -160,4 +134,41 @@ void opcontrol() {
     chassis.arcade(fwd, turn);
     pros::delay(10);
     }
+}
+void intake(){
+    intake1.move(600);
+    intake2.move(-600);
+    top.set_value(false);
+}
+void intakestop(){
+    intake1.move(0);
+    intake2.move(0);
+}
+void loading(){
+    intake1.move(600);
+    intake2.move(-600);
+    load.set_value(true);
+}
+void loadingstop(){
+    intake1.move(0);
+    intake2.move(0);
+    load.set_value(false);
+}
+void lowgoal(){
+    intake1.move(600);
+    intake2.move(-600);
+}
+void lowgoalstop(){
+    intake1.move(0);
+    intake2.move(0);
+}
+void highgoal(){
+    intake1.move(-600);
+    intake2.move(-600);
+    intake3.move(-600);
+}
+void highgoalstop(){
+    intake1.move(0);
+    intake2.move(0);
+    intake3.move(0);
 }
