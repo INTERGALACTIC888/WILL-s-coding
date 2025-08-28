@@ -2,9 +2,9 @@
 #include "robot-config.hpp"
 #include "lemlib/api.hpp"
 #include "lemlib/asset.hpp" //Only needed if you use ASSET() paths
-pros::Motor intake1(1);
-pros::Motor intake2(2);
-pros::Motor intake3(10);
+// pros::Motor intake1(1);
+// pros::Motor intake2(2);
+// pros::Motor intake3(10);
 pros::adi::Pneumatics top('A', false);
 pros::adi::Pneumatics basket('H', false);
 pros::adi::Pneumatics load ('F', false);
@@ -21,14 +21,53 @@ pros::adi::Pneumatics load ('F', false);
 //CHange drive mode by searching in main.cpp "chassis.tank" or "chassis.split arcade"
 //Optional: embed static/example.txt as an asset (you have this file)
 
-//TODO
-    //Install the 2 TrackingWheels
-        //Use smallest size available
-        //Make wheels spriny and pneumatically controlled
-            //Do this by having low pressure air in piston holding wheel
-    //Find the measurements from tracking wheel and tracking centre(middle of drivetrain)
-        //Make sure that the wheels are flat or ground level
-    //Find size of tracking wheels
+// Notes for 28/08
+// TODO!!!
+// For tuning
+// Remember to update blue1
+    //Lines might be 4 off
+    //Tune line 21, 23 of robot config
+        //24 is resolved
+        // for line 24, traction touching ground = 0, no traction touching ground = 2
+        //^ involves measuring the robot
+    //line 37 & 38, robot config:
+        //Forward is positive
+        //Backwards is negative
+        //Forwards is forwards or rightwards
+        //Use pos and neg for forwards and backwards
+        //Figure out if the code follow what it is meant to
+    //line 39 & 40
+        //Put the robot on a clear surface
+        //Find the middle of the drivetrain based of wheel positioning
+            //Drive wheels not tracking ones
+        //Bigger the distance bigger the offset
+        //Trace from underneath
+        //Get lucas todo
+    //line 49-55 
+        //Tune PID
+        //Set targert to 600mm/20in test for 10min, if offset is within 0.5in or 12.5 mm robot is tuned
+    //line 57-62
+        //Tune pid
+        //Test if robot can turn, 45, then 180, then 360 10 times, and ensure it is with 2-3 degrees
+    //line 12-14
+        //put in the values
+            // e.g. (port, pros::v5::MotorGears::blue)(for 11 watts)(Change the cartridge color)
+            // e.g. (port, pros::v5::MotorGears::green)(for 5.5 watts)(Do not change if it is 5.5)
+    //main in "pros::Task screenTask([] {" run function and see if they move at the right place
+        //Run function and see if they move at thr right place
+        //Use controller to test
+    //main in "chassis.setPose(0, 0, 0);"
+        //Give the starting value in path 1    
+    //Jerry.io, path 1-10
+        //Input robot size as it effects the path
+        //Find first coordinate for path 1 for "chassis.setPose(0, 0, 0)"
+            //Done
+        //Need to update angles based off the "Show robot" feature
+    
+    
+
+
+
 
 ASSET(example_txt); // comment out if you don't want to use path following yet
 
@@ -46,7 +85,6 @@ void initialize() {
 
     configureSensors();
     chassis.setPose(0, 0, 0);
-
     //Show pose on LCD
     pros::Task screenTask([] {
         while (true) {
@@ -54,9 +92,47 @@ void initialize() {
             pros::lcd::print(0, "X: %.2f", p.x);
             pros::lcd::print(1, "Y: %.2f", p.y);
             pros::lcd::print(2, "Th: %.2f", p.theta);
-            pros::delay(50);
+            pros::delay(5);
         }
     });
+}
+
+void intake(){
+    intake1.move(600);
+    intake2.move(-600);
+    top.set_value(false);
+}
+void intakestop(){
+    intake1.move(0);
+    intake2.move(0);
+}
+void loading(){
+    intake1.move(600);
+    intake2.move(-600);
+    load.set_value(true);
+}
+void loadingstop(){
+    intake1.move(0);
+    intake2.move(0);
+    load.set_value(false);
+}
+void lowgoal(){
+    intake1.move(600);
+    intake2.move(-600);
+}
+void lowgoalstop(){
+    intake1.move(0);
+    intake2.move(0);
+}
+void highgoal(){
+    intake1.move(-600);
+    intake2.move(-600);
+    intake3.move(-600);
+}
+void highgoalstop(){
+    intake1.move(0);
+    intake2.move(0);
+    intake3.move(0);
 }
 
 void disabled() {}
@@ -67,7 +143,9 @@ static inline bool isBallInIntake() {
     return optical1.get_proximity() > 100; // tune threshold on the bot
 }
 static inline void setIntake(int v) {
-    intakeF.move(v); intakeM.move(v); intakeB.move(v);
+    intake1.move(v); 
+    intake2.move(v); 
+    intake3.move(v);
 }
 ASSET(Part1_txt);
 ASSET(Part2_txt);
@@ -80,8 +158,9 @@ ASSET(Part8_txt);
 ASSET(Part9_txt);
 ASSET(Part10_txt);
 void autonomous() {
-    chassis.setPose(0, 0, 0);
-
+    chassis.setPose(-69.92, -24.282, 96.826);
+    leftDrive.set_brake_mode(pros::MotorBrake::brake);
+    rightDrive.set_brake_mode(pros::MotorBrake::brake);
     //If you want to follow the embedded path from static/example.txt:
     //Lookahead 15", 2s timeout
     intake();
@@ -128,47 +207,13 @@ void autonomous() {
     lowgoalstop();
 }
 void opcontrol() {
-    while (true) {
-    const double fwd = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0;
-    const double turn = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0;
-    chassis.arcade(fwd, turn);
-    pros::delay(10);
+    leftDrive.set_brake_mode(pros::MotorBrake::coast);
+    rightDrive.set_brake_mode(pros::MotorBrake::coast);
+    
+    while(true){
+        const double fwd = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0;
+        const double turn = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0;
+        chassis.arcade(fwd, turn);
+        pros::delay(5);
     }
-}
-void intake(){
-    intake1.move(600);
-    intake2.move(-600);
-    top.set_value(false);
-}
-void intakestop(){
-    intake1.move(0);
-    intake2.move(0);
-}
-void loading(){
-    intake1.move(600);
-    intake2.move(-600);
-    load.set_value(true);
-}
-void loadingstop(){
-    intake1.move(0);
-    intake2.move(0);
-    load.set_value(false);
-}
-void lowgoal(){
-    intake1.move(600);
-    intake2.move(-600);
-}
-void lowgoalstop(){
-    intake1.move(0);
-    intake2.move(0);
-}
-void highgoal(){
-    intake1.move(-600);
-    intake2.move(-600);
-    intake3.move(-600);
-}
-void highgoalstop(){
-    intake1.move(0);
-    intake2.move(0);
-    intake3.move(0);
 }

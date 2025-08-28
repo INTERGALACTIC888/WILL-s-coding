@@ -26,6 +26,6 @@ extern lemlib::Chassis chassis;
 void configureSensors();
 
 //(Optional now, used below)
-extern pros::Motor intakeF;
-extern pros::Motor intakeM;
-extern pros::Motor intakeB;
+extern pros::Motor intake1;
+extern pros::Motor intake2;
+extern pros::Motor intake3;
